@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#081b32">
+    <title>Snowball Toss</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        background: #081b32;
+        color: #f4f9ff;
+        font-synthesis: none;
+      }
+      * { box-sizing: border-box; }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(ellipse at 50% -20%, #24517b 0, transparent 56%),
+          linear-gradient(160deg, #102c4a, #081b32 66%);
+      }
+      button, input { font: inherit; }
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 14px 20px;
+        color: #062039;
+        background: #8fe6fb;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform 120ms ease, filter 120ms ease;
+      }
+      button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+      button:disabled { cursor: wait; opacity: .65; }
+      button.secondary {
+        color: #e6f4ff;
+        border: 1px solid #527393;
+        background: #193956;
+      }
+      .shell { width: min(100% - 32px, 1120px); margin: 0 auto; padding: 28px 0 36px; }
+      .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+      .brand-mark { font-size: 32px; }
+      .brand-name { font-size: 19px; font-weight: 900; letter-spacing: .04em; }
+      .eyebrow { color: #8fe6fb; font-size: 12px; font-weight: 900; letter-spacing: .17em; text-transform: uppercase; }
+      h1 { margin: 10px 0; font-size: clamp(36px, 7vw, 64px); line-height: 1.02; letter-spacing: -.04em; }
+      h2 { margin: 0 0 10px; font-size: 24px; }
+      p { color: #c1d4e6; line-height: 1.55; }
+      .intro { max-width: 650px; margin: 0 0 28px; font-size: 17px; }
+      .panel {
+        border: 1px solid #325271;
+        border-radius: 22px;
+        background: linear-gradient(150deg, rgb(24 53 81 / 95%), rgb(14 37 61 / 96%));
+        box-shadow: 0 20px 70px rgb(0 0 0 / 20%);
+      }
+      .setup { max-width: 740px; padding: clamp(22px, 5vw, 42px); }
+      .choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 26px; }
+      .choice {
+        display: flex;
+        min-height: 136px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 9px;
+        padding: 22px;
+        text-align: left;
+        color: #f4f9ff;
+        border: 1px solid #456785;
+        background: #193956;
+      }
+      .choice strong { font-size: 18px; }
+      .choice span { color: #bfd2e3; font-size: 14px; font-weight: 500; line-height: 1.4; }
+      .choice .icon { font-size: 30px; }
+      .join-form { display: grid; grid-template-columns: 1fr auto; gap: 12px; margin-top: 20px; }
+      .join-form input {
+        min-width: 0;
+        border: 1px solid #577995;
+        border-radius: 12px;
+        padding: 14px 16px;
+        color: white;
+        background: #0c2640;
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+      }
+      .message { min-height: 24px; margin: 14px 0 0; color: #ffc9a9; }
+      .hidden { display: none !important; }
+      .game-shell { width: min(100% - 24px, 1320px); padding-top: 16px; }
+      .game-top, .stat-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .game-top { margin-bottom: 14px; }
+      .game-title { display: flex; align-items: center; gap: 10px; font-weight: 900; }
+      .stats { display: flex; gap: 10px; }
+      .stat {
+        min-width: 86px;
+        padding: 9px 13px;
+        border: 1px solid #345575;
+        border-radius: 12px;
+        background: #102b47;
+        text-align: center;
+      }
+      .stat small { display: block; color: #9eb9d0; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+      .stat strong { font-size: 21px; }
+      .game-board {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 16 / 10;
+        border: 1px solid #5b829f;
+        border-radius: 20px;
+        background: #102c49;
+        box-shadow: 0 22px 65px rgb(0 0 0 / 28%);
+      }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+      .room-card {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 14px;
+        padding: 14px 18px;
+      }
+      .room-code { color: #8fe6fb; font-size: 21px; font-weight: 900; letter-spacing: .15em; }
+      .room-note { color: #c1d4e6; font-size: 13px; }
+      .phone-link { color: #fff; font-weight: 800; }
+      .qr-join { display: flex; align-items: center; gap: 12px; }
+      .qr-join img { display: block; width: 116px; height: 116px; padding: 5px; border-radius: 10px; background: #fff; }
+      .qr-caption { max-width: 150px; color: #c1d4e6; font-size: 13px; line-height: 1.45; }
+      .qr-caption strong { display: block; margin-bottom: 4px; color: #8fe6fb; }
+      .phone-shell { width: min(100% - 26px, 580px); padding-top: max(14px, env(safe-area-inset-top)); }
+      .phone-shell .brand { margin-bottom: 17px; }
+      .phone-shell h1 { font-size: clamp(34px, 10vw, 50px); }
+      .phone-shell .intro { margin-bottom: 16px; font-size: 15px; }
+      .controller-board { width: 100%; margin-top: 18px; }
+      .controller-board .game-board { border-radius: 16px; }
+      .aim-help { margin: 14px 2px 6px; font-size: 15px; text-align: center; }
+      .aim-state { min-height: 24px; color: #8fe6fb; font-weight: 800; text-align: center; }
+      .controller-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: #a9bfd3; font-size: 13px; }
+      .feedback { color: #a9f6cc; font-weight: 900; }
+      @media (max-width: 600px) {
+        .shell { width: min(100% - 24px, 1120px); padding-top: 20px; }
+        .choices { grid-template-columns: 1fr; }
+        .choice { min-height: 112px; }
+        .join-form { grid-template-columns: 1fr; }
+        .join-form button { min-height: 50px; }
+        .game-shell { width: min(100% - 16px, 1320px); }
+        .game-top { align-items: flex-start; }
+        .stats { gap: 5px; }
+        .stat { min-width: 58px; padding: 7px 8px; }
+        .stat strong { font-size: 18px; }
+        .stat small { font-size: 9px; }
+        .game-board { border-radius: 14px; }
+        .room-card { align-items: flex-start; flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app">
+      <section id="home" class="shell">
+        <div class="brand"><span class="brand-mark">❄️</span><span class="brand-name">SNOWBALL TOSS</span></div>
+        <div class="setup panel">
+          <div class="eyebrow">Two screens. One snowball.</div>
+          <h1>Take aim.<br>Make it snow.</h1>
+          <p class="intro">Use your phone as a snowball launcher and your computer as the target screen. Line up your flick and see if you can hit the bullseye.</p>
+          <div id="home-message" class="message" role="status"></div>
+          <div id="mode-choices" class="choices">
+            <button id="start-screen" class="choice">
+              <span class="icon">🖥️</span>
+              <strong>I'm on the computer</strong>
+              <span>Show the target and start a game.</span>
+            </button>
+            <button id="show-controller" class="choice">
+              <span class="icon">📱</span>
+              <strong>I'm on the phone</strong>
+              <span>Join a game already running on a computer.</span>
+            </button>
+          </div>
+          <div id="join-panel" class="hidden">
+            <h2>Join the computer</h2>
+            <p>Enter the six-character room code shown beneath the target.</p>
+            <form id="join-form" class="join-form">
+              <input id="room-input" aria-label="Room code" autocomplete="off" maxlength="6" placeholder="ROOM CODE" required>
+              <button type="submit">Join game</button>
+            </form>
+            <button id="back-home" class="secondary" style="margin-top:14px">Back</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="screen-game" class="shell game-shell hidden">
+        <div class="game-top">
+          <div class="game-title"><span>❄️</span><span>SNOWBALL TOSS</span></div>
+          <div class="stats">
+            <div class="stat"><small>SCORE</small><strong id="screen-score">0</strong></div>
+            <div class="stat"><small>STREAK</small><strong id="screen-streak">0</strong></div>
+            <div class="stat"><small>THROWS</small><strong id="screen-shots">0</strong></div>
+          </div>
+        </div>
+        <div class="game-board"><canvas id="screen-canvas" width="1200" height="750" aria-label="Snowball target game"></canvas></div>
+        <div class="room-card panel">
+          <div><div class="eyebrow">Phone controller</div><div class="room-code" id="screen-code">------</div></div>
+          <div class="qr-join"><img id="phone-qr" alt="QR code to join this game with a phone"><div class="qr-caption"><strong>Scan to join</strong>Open your phone camera and scan this code. It joins this game automatically.</div></div>
+          <div><div class="room-note">Or visit <span class="phone-link" id="phone-url"></span></div><div class="room-note">Enter the room code above. Both devices need internet.</div></div>
+          <button id="new-game" class="secondary">New game</button>
+        </div>
+        <div id="screen-message" class="aim-state" role="status"></div>
+      </section>
+
+      <section id="phone-game" class="shell phone-shell hidden">
+        <div class="brand"><span class="brand-mark">❄️</span><span class="brand-name">SNOWBALL TOSS</span></div>
+        <div class="stat-row">
+          <div><div class="eyebrow">Phone controller</div><strong id="phone-room" class="room-code"></strong></div>
+          <div class="stats">
+            <div class="stat"><small>SCORE</small><strong id="phone-score">0</strong></div>
+            <div class="stat"><small>STREAK</small><strong id="phone-streak">0</strong></div>
+          </div>
+        </div>
+        <p class="aim-help">Drag the snowball toward the target and release to throw.</p>
+        <div class="controller-board">
+          <div class="game-board"><canvas id="phone-canvas" width="960" height="600" aria-label="Drag to aim and release to throw"></canvas></div>
+          <div id="aim-state" class="aim-state" role="status">Waiting for your throw…</div>
+        </div>
+        <div class="controller-footer"><span id="phone-shot-count">0 throws</span><span id="phone-feedback" class="feedback"></span></div>
+      </section>
+    </main>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const START = { x: 0.5, y: 0.86 };
+      const app = {
+        info: null,
+        room: null,
+        mode: null,
+        dragging: false,
+        aim: null,
+        animation: null,
+        animationStarted: 0,
+        lastThrowId: 0,
+        feedbackUntil: 0,
+        pollTimer: null,
+        frame: null,
+        sending: false,
+      };
+
+      function show(view) {
+        $("home").classList.toggle("hidden", view !== "home");
+        $("screen-game").classList.toggle("hidden", view !== "screen");
+        $("phone-game").classList.toggle("hidden", view !== "phone");
+      }
+
+      async function api(url, options) {
+        const response = await fetch(url, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Something went wrong.");
+        return data;
+      }
+
+      function drawScene(canvas, room, options) {
+        const ctx = canvas.getContext("2d");
+        const width = canvas.width;
+        const height = canvas.height;
+        const target = room ? room.target : { x: 0.5, y: 0.38 };
+        const sky = ctx.createLinearGradient(0, 0, 0, height);
+        sky.addColorStop(0, "#18466b");
+        sky.addColorStop(0.65, "#286287");
+        sky.addColorStop(1, "#b8e4ed");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, width, height);
+
+        for (let i = 0; i < 48; i++) {
+          const x = ((i * 193 + 61) % width);
+          const y = ((i * 137 + 27) % (height * 0.72));
+          ctx.globalAlpha = 0.25 + (i % 4) * 0.12;
+          ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.arc(x, y, i % 3 === 0 ? 2.5 : 1.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.fillStyle = "#d9f4f5";
+        ctx.beginPath();
+        ctx.moveTo(0, height * 0.76);
+        ctx.quadraticCurveTo(width * 0.2, height * 0.57, width * 0.42, height * 0.76);
+        ctx.quadraticCurveTo(width * 0.68, height * 0.53, width, height * 0.74);
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.fill();
+        ctx.fillStyle = "#f4fbfc";
+        ctx.beginPath();
+        ctx.moveTo(0, height * 0.88);
+        ctx.quadraticCurveTo(width * 0.35, height * 0.7, width * 0.62, height * 0.89);
+        ctx.quadraticCurveTo(width * 0.83, height * 0.76, width, height * 0.86);
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.fill();
+
+        const tx = target.x * width;
+        const ty = target.y * height;
+        const radius = Math.min(width, height) * 0.075;
+        ctx.save();
+        ctx.shadowColor = "rgb(5 26 44 / 40%)";
+        ctx.shadowBlur = Math.min(width, height) * 0.025;
+        ctx.shadowOffsetY = Math.min(width, height) * 0.012;
+        ctx.fillStyle = "#ef615c";
+        ctx.beginPath();
+        ctx.arc(tx, ty, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+        ctx.lineWidth = Math.max(3, radius * 0.1);
+        ctx.strokeStyle = "#fff5e9";
+        ctx.beginPath();
+        ctx.arc(tx, ty, radius * 0.69, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "#fff5e9";
+        ctx.beginPath();
+        ctx.arc(tx, ty, radius * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ef615c";
+        ctx.beginPath();
+        ctx.arc(tx, ty, radius * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        const start = { x: START.x * width, y: START.y * height };
+        let ball = start;
+        if (options && options.aim) {
+          const end = { x: options.aim.x * width, y: options.aim.y * height };
+          ctx.save();
+          ctx.setLineDash([9, 12]);
+          ctx.lineWidth = Math.max(2, width * 0.0025);
+          ctx.strokeStyle = "rgb(255 255 255 / 75%)";
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+          ctx.stroke();
+          ctx.restore();
+          if (options.showBall) ball = end;
+        } else if (options && options.throw && options.progress < 1) {
+          const progress = Math.max(0, options.progress);
+          const end = { x: options.throw.x * width, y: options.throw.y * height };
+          const eased = 1 - Math.pow(1 - progress, 2);
+          const arc = Math.sin(progress * Math.PI) * height * 0.08;
+          ball = {
+            x: start.x + (end.x - start.x) * eased,
+            y: start.y + (end.y - start.y) * eased - arc,
+          };
+          ctx.save();
+          ctx.globalAlpha = 0.42;
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = Math.max(3, width * 0.004);
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(ball.x, ball.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.fillStyle = "rgb(11 49 76 / 18%)";
+        ctx.beginPath();
+        ctx.ellipse(start.x, start.y + height * 0.023, width * 0.027, height * 0.012, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const ballRadius = Math.min(width, height) * 0.037;
+        const ballGradient = ctx.createRadialGradient(
+          ball.x - ballRadius * 0.35, ball.y - ballRadius * 0.4, ballRadius * 0.1,
+          ball.x, ball.y, ballRadius
+        );
+        ballGradient.addColorStop(0, "#fff");
+        ballGradient.addColorStop(1, "#b8dce8");
+        ctx.fillStyle = ballGradient;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = Math.max(1.5, ballRadius * 0.08);
+        ctx.strokeStyle = "rgb(37 93 122 / 55%)";
+        ctx.stroke();
+
+        if (options && options.result) {
+          ctx.font = `900 ${Math.round(Math.min(width, height) * 0.075)}px Trebuchet MS, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.lineWidth = Math.max(3, width * 0.005);
+          ctx.strokeStyle = "rgb(5 31 51 / 65%)";
+          ctx.fillStyle = options.result.hit ? "#b9ffd3" : "#fff";
+          const label = options.result.hit ? "BULLSEYE!" : "SO CLOSE!";
+          ctx.strokeText(label, width / 2, height * 0.18);
+          ctx.fillText(label, width / 2, height * 0.18);
+        }
+      }
+
+      function paintScreen() {
+        const canvas = $("screen-canvas");
+        const room = app.room;
+        if (!room) return;
+        $("screen-score").textContent = room.score;
+        $("screen-streak").textContent = room.streak;
+        $("screen-shots").textContent = room.shots;
+        let options = null;
+        if (app.animation) {
+          options = {
+            throw: app.animation,
+            progress: Math.min(1, (performance.now() - app.animationStarted) / 720),
+          };
+          if (options.progress >= 1) app.animation = null;
+        }
+        if (room.lastThrow && performance.now() < app.feedbackUntil) {
+          options = { ...(options || {}), result: room.lastThrow };
+        }
+        drawScene(canvas, room, options);
+        if (app.animation || performance.now() < app.feedbackUntil) {
+          app.frame = requestAnimationFrame(paintScreen);
+        } else {
+          app.frame = null;
+        }
+      }
+
+      function paintPhone() {
+        const canvas = $("phone-canvas");
+        if (!app.room) return;
+        drawScene(canvas, app.room, app.aim ? { aim: app.aim, showBall: true } : null);
+      }
+
+      function updateRoom(state, isScreen) {
+        app.room = state;
+        if (state.lastThrow && state.lastThrow.id > app.lastThrowId) {
+          app.lastThrowId = state.lastThrow.id;
+          if (isScreen) {
+            app.animation = state.lastThrow;
+            app.animationStarted = performance.now();
+            app.feedbackUntil = performance.now() + 1700;
+            $("screen-message").textContent = state.lastThrow.hit ? "Bullseye! Nice throw." : "Missed! Line it up and try again.";
+          } else {
+            $("phone-feedback").textContent = state.lastThrow.hit ? "Bullseye!" : "Miss!";
+            window.setTimeout(() => { $("phone-feedback").textContent = ""; }, 1300);
+          }
+        }
+        if (isScreen) {
+          if (!app.frame) paintScreen();
+        } else {
+          $("phone-score").textContent = state.score;
+          $("phone-streak").textContent = state.streak;
+          $("phone-shot-count").textContent = `${state.shots} ${state.shots === 1 ? "throw" : "throws"}`;
+          paintPhone();
+        }
+      }
+
+      async function startScreenGame() {
+        $("start-screen").disabled = true;
+        $("home-message").textContent = "";
+        try {
+          app.mode = "screen";
+          const room = await api("/api/rooms", { method: "POST", body: "{}" });
+          app.room = room;
+          app.lastThrowId = 0;
+          $("screen-code").textContent = room.id;
+          const base = location.origin;
+          $("phone-url").textContent = base;
+          $("phone-qr").removeAttribute("src");
+          $("screen-message").textContent = "";
+          show("screen");
+          paintScreen();
+          startPolling(true);
+          const qr = await api(`/api/qr?room=${encodeURIComponent(room.id)}`);
+          $("phone-qr").src = qr.dataUrl;
+          $("phone-url").textContent = new URL(qr.url).origin;
+        } catch (error) {
+          const message = $("screen-game").classList.contains("hidden")
+            ? $("home-message")
+            : $("screen-message");
+          message.textContent = error.message;
+        } finally {
+          $("start-screen").disabled = false;
+        }
+      }
+
+      function startPolling(isScreen) {
+        window.clearInterval(app.pollTimer);
+        const poll = async () => {
+          if (!app.room) return;
+          try {
+            const state = await api(`/api/rooms/${app.room.id}`);
+            updateRoom(state, isScreen);
+          } catch (error) {
+            if (isScreen) $("screen-message").textContent = error.message;
+            else $("aim-state").textContent = error.message;
+            window.clearInterval(app.pollTimer);
+          }
+        };
+        app.pollTimer = window.setInterval(poll, isScreen ? 100 : 450);
+      }
+
+      async function joinRoom(event) {
+        event.preventDefault();
+        await joinRoomCode($("room-input").value.trim().toUpperCase());
+      }
+
+      async function joinRoomCode(code) {
+        $("home-message").textContent = "";
+        try {
+          const room = await api(`/api/rooms/${encodeURIComponent(code)}`);
+          app.room = room;
+          app.mode = "phone";
+          app.lastThrowId = room.lastThrow ? room.lastThrow.id : 0;
+          $("phone-room").textContent = room.id;
+          $("aim-state").textContent = "Drag the ball toward the target.";
+          $("phone-feedback").textContent = "";
+          show("phone");
+          updateRoom(room, false);
+          startPolling(false);
+        } catch (error) {
+          $("home-message").textContent = error.message;
+        }
+      }
+
+      async function throwBall(point) {
+        if (!app.room || app.sending) return;
+        app.sending = true;
+        $("aim-state").textContent = "Snowball away!";
+        try {
+          const state = await api(`/api/rooms/${app.room.id}/throw`, {
+            method: "POST",
+            body: JSON.stringify(point),
+          });
+          updateRoom(state, false);
+          $("aim-state").textContent = "Drag the ball toward the target.";
+        } catch (error) {
+          $("aim-state").textContent = error.message;
+        } finally {
+          app.sending = false;
+          app.aim = null;
+          paintPhone();
+        }
+      }
+
+      function aimPoint(event) {
+        const rect = $("phone-canvas").getBoundingClientRect();
+        return {
+          x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
+          y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)),
+        };
+      }
+
+      $("start-screen").addEventListener("click", startScreenGame);
+      $("show-controller").addEventListener("click", () => {
+        $("mode-choices").classList.add("hidden");
+        $("join-panel").classList.remove("hidden");
+        $("room-input").focus();
+      });
+      $("back-home").addEventListener("click", () => {
+        $("join-panel").classList.add("hidden");
+        $("mode-choices").classList.remove("hidden");
+        $("home-message").textContent = "";
+      });
+      $("join-form").addEventListener("submit", joinRoom);
+      $("room-input").addEventListener("input", (event) => {
+        event.target.value = event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+      });
+      $("new-game").addEventListener("click", () => {
+        window.clearInterval(app.pollTimer);
+        if (app.frame) cancelAnimationFrame(app.frame);
+        app.room = null;
+        app.animation = null;
+        show("home");
+      });
+
+      const requestedRoom = new URLSearchParams(location.search).get("room");
+      if (requestedRoom) {
+        $("room-input").value = requestedRoom.toUpperCase();
+        $("mode-choices").classList.add("hidden");
+        $("join-panel").classList.remove("hidden");
+        joinRoomCode(requestedRoom.toUpperCase());
+      }
+
+      const phoneCanvas = $("phone-canvas");
+      phoneCanvas.addEventListener("pointerdown", (event) => {
+        if (!app.room || app.sending) return;
+        const point = aimPoint(event);
+        if (Math.hypot((point.x - START.x) * 1.6, point.y - START.y) > 0.15) return;
+        event.preventDefault();
+        app.dragging = true;
+        app.aim = { ...START };
+        phoneCanvas.setPointerCapture(event.pointerId);
+        paintPhone();
+      });
+      phoneCanvas.addEventListener("pointermove", (event) => {
+        if (!app.dragging) return;
+        event.preventDefault();
+        app.aim = aimPoint(event);
+        $("aim-state").textContent = "Release to throw!";
+        paintPhone();
+      });
+      function releaseAim(event) {
+        if (!app.dragging) return;
+        app.dragging = false;
+        const point = aimPoint(event);
+        app.aim = point;
+        throwBall(point);
+      }
+      phoneCanvas.addEventListener("pointerup", releaseAim);
+      phoneCanvas.addEventListener("pointercancel", releaseAim);
+
+      api("/api/info").then((data) => { app.info = data; }).catch(() => {});
+    </script>
+  </body>
+</html>
