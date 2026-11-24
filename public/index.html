@@ -106,7 +106,6 @@
         text-align: center;
       }
       .winner-card h2 { margin: 14px 0; color: #ffe082; font-size: clamp(36px, 8vw, 58px); }
-      .winner-card p { margin: 0 0 24px; }
       .game-shell { width: min(100% - 24px, 1320px); padding-top: 16px; }
       .game-top, .stat-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .game-top { margin-bottom: 14px; }
@@ -261,11 +260,10 @@
         </div>
         <div class="controller-footer"><span id="phone-shot-count">0 throws</span><span id="phone-feedback" class="feedback"></span></div>
       </section>
-      <div id="winner-popup" class="winner-popup hidden" role="alertdialog" aria-modal="true" aria-labelledby="winner-title" aria-describedby="winner-description">
+      <div id="winner-popup" class="winner-popup hidden" role="alertdialog" aria-modal="true" aria-labelledby="winner-title">
         <div class="winner-card">
           <div class="eyebrow">Game over</div>
           <h2 id="winner-title">Player wins!</h2>
-          <p id="winner-description">First to 100 points!</p>
           <button id="winner-close" type="button">Continue</button>
         </div>
       </div>
