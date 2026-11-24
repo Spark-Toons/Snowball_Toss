@@ -110,6 +110,7 @@
       .game-top, .stat-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .game-top { margin-bottom: 14px; }
       .game-title { display: flex; align-items: center; gap: 10px; font-weight: 900; }
+      .fullscreen-toggle { padding: 9px 12px; font-size: 13px; white-space: nowrap; }
       .stats { display: flex; gap: 10px; }
       .player-scores { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; }
       .player-score {
@@ -143,6 +144,11 @@
         background: #102c49;
         box-shadow: 0 22px 65px rgb(0 0 0 / 28%);
       }
+      .screen-board { width: min(100%, 850px); margin: 0 auto; }
+      #app:fullscreen { height: 100vh; overflow: auto; background: #081b32; }
+      #app:fullscreen #screen-game { width: 100%; max-width: none; min-height: 100vh; padding: 12px 24px; }
+      #app:fullscreen #screen-game .screen-board { width: min(100%, 1280px); }
+      #app:fullscreen #screen-game .room-card { display: none; }
       canvas { display: block; width: 100%; height: 100%; touch-action: none; }
       .room-card {
         display: flex;
@@ -170,6 +176,15 @@
       .aim-state { min-height: 24px; color: #8fe6fb; font-weight: 800; text-align: center; }
       .controller-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: #a9bfd3; font-size: 13px; }
       .feedback { color: #a9f6cc; font-weight: 900; }
+      @media (min-width: 601px) and (max-height: 820px) {
+        .game-shell { padding-top: 8px; padding-bottom: 8px; }
+        .game-top, .player-scores { margin-bottom: 8px; }
+        .screen-board { width: min(100%, 700px); }
+        .room-card { margin-top: 8px; padding: 8px 12px; }
+      }
+      @media (max-height: 900px) {
+        #app:fullscreen #screen-game .screen-board { width: min(100%, 950px); }
+      }
       @media (max-width: 600px) {
         .shell { width: min(100% - 24px, 1120px); padding-top: 20px; }
         .choices { grid-template-columns: 1fr; }
@@ -177,7 +192,8 @@
         .join-form { grid-template-columns: 1fr; }
         .join-form button { min-height: 50px; }
         .game-shell { width: min(100% - 16px, 1320px); }
-        .game-top { align-items: flex-start; }
+        .game-top { align-items: flex-start; flex-wrap: wrap; }
+        .screen-board { width: 100%; }
         .stats { gap: 5px; }
         .stat { min-width: 58px; padding: 7px 8px; }
         .stat strong { font-size: 18px; }
@@ -223,6 +239,7 @@
       <section id="screen-game" class="shell game-shell hidden">
         <div class="game-top">
           <div class="game-title"><span>❄️</span><span>SNOWBALL TOSS</span></div>
+          <button id="toggle-fullscreen" class="secondary fullscreen-toggle" type="button">Fullscreen</button>
           <div class="stats">
             <div class="stat"><small>TOTAL</small><strong id="screen-score">0</strong></div>
             <div class="stat"><small>RUN</small><strong id="screen-streak">0</strong></div>
@@ -230,7 +247,7 @@
           </div>
         </div>
         <div id="player-scores" class="player-scores" aria-label="Player scores"></div>
-        <div class="game-board"><canvas id="screen-canvas" width="1200" height="750" aria-label="Snowball target game"></canvas></div>
+        <div class="game-board screen-board"><canvas id="screen-canvas" width="1200" height="750" aria-label="Snowball target game"></canvas></div>
         <div class="room-card panel">
           <div><div class="eyebrow">Phone controller</div><div class="room-code" id="screen-code">------</div></div>
           <div class="qr-join"><img id="phone-qr" alt="QR code to join this game with a phone"><div class="qr-caption"><strong>Scan to join</strong>Open your phone camera and scan this code. It joins this game automatically.</div></div>
@@ -816,6 +833,26 @@
         app.animation = null;
         app.explosion = null;
         show("home");
+      });
+      $("toggle-fullscreen").addEventListener("click", async () => {
+        try {
+          if (!document.fullscreenEnabled || !$("app").requestFullscreen) {
+            $("screen-message").textContent = "Fullscreen is not supported by this browser.";
+            return;
+          }
+          if (document.fullscreenElement === $("app")) {
+            await document.exitFullscreen();
+          } else {
+            await $("app").requestFullscreen();
+          }
+        } catch (error) {
+          $("screen-message").textContent = `Could not change fullscreen mode: ${error.message}`;
+        }
+      });
+      document.addEventListener("fullscreenchange", () => {
+        $("toggle-fullscreen").textContent = document.fullscreenElement === $("app")
+          ? "Exit fullscreen"
+          : "Fullscreen";
       });
       $("winner-close").addEventListener("click", () => {
         $("winner-popup").classList.add("hidden");
