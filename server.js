@@ -21,6 +21,7 @@ const TARGET_MAX_X = 0.92;
 const AIR_TARGET_INTERVAL = 5000;
 const AIR_TARGET_HIDDEN_DURATION = 400;
 const AIR_TARGET_MIN_SPACING = 0.28;
+const WIN_SCORE = 100;
 
 function json(response, status, value) {
   response.writeHead(status, {
@@ -124,6 +125,7 @@ function roomState(room) {
     streak: room.streak,
     lastThrow: room.lastThrow,
     players: room.players.map((player) => ({ ...player })),
+    winner: room.winner ? { ...room.winner } : null,
   };
 }
 
@@ -228,6 +230,7 @@ const server = http.createServer(async (request, response) => {
       streak: 0,
       lastThrow: null,
       players: [],
+      winner: null,
     };
     rooms.set(id, room);
     json(response, 201, roomState(room));
@@ -248,6 +251,10 @@ const server = http.createServer(async (request, response) => {
         const existingPlayer = room.players.find((player) => player.id === playerId);
         if (existingPlayer) {
           json(response, 200, { ...roomState(room), playerId: existingPlayer.id });
+          return;
+        }
+        if (room.winner) {
+          json(response, 409, { error: `${room.winner.name} already won with ${room.winner.score} points.` });
           return;
         }
         if (room.players.length >= PLAYER_COLORS.length) {
@@ -286,6 +293,10 @@ const server = http.createServer(async (request, response) => {
           json(response, 403, { error: "Join this game before throwing." });
           return;
         }
+        if (room.winner) {
+          json(response, 409, { error: `${room.winner.name} already won with ${room.winner.score} points.` });
+          return;
+        }
         if (
           !Number.isFinite(x) ||
           !Number.isFinite(y) ||
@@ -311,8 +322,18 @@ const server = http.createServer(async (request, response) => {
         room.streak = hit ? room.streak + 1 : 0;
         player.shots += 1;
         player.streak = hit ? player.streak + 1 : 0;
-        if (hit) room.score += 1;
-        if (hit) player.score += 1;
+        if (hit) {
+          room.score += 1;
+          player.score += 1;
+          if (player.score >= WIN_SCORE) {
+            room.winner = {
+              id: player.id,
+              name: player.name,
+              color: player.color,
+              score: player.score,
+            };
+          }
+        }
         room.lastThrow = {
           id: room.shots,
           playerId: player.id,

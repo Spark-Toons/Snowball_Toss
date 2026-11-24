@@ -1,6 +1,6 @@
 # Snowball Toss
 
-A multiplayer two-screen game: the computer shows the targets, and up to four phones join as color-coded snowball controllers with matching ball sprites. The board uses `public/game-background.png`, and `public/penguin-walk.gif` animates the penguin as it walks across the snow and flips direction at each edge. Players can hit the penguin or one of three airborne `public/air-target.png` bullseyes. Two of the airborne targets relocate every five seconds; any hit target briefly explodes before reappearing.
+A multiplayer two-screen game: the computer shows the targets, and up to four phones join as color-coded snowball controllers with matching ball sprites. The board uses `public/game-background.png`, and `public/penguin-walk.gif` animates the penguin as it walks across the snow and flips direction at each edge. Players can hit the penguin or one of three airborne `public/air-target.png` bullseyes. All airborne targets relocate every five seconds; any hit target briefly explodes before reappearing. The first player to reach 100 points wins and ends the round.
 
 ## Run it locally
 
@@ -9,7 +9,7 @@ A multiplayer two-screen game: the computer shows the targets, and up to four ph
 3. Open one of the `http://...` LAN addresses printed by the server on the computer.
 4. On the computer, choose **I'm on the computer**. On each phone, open that same address and choose **I'm on the phone**.
 5. Enter the room code shown under the computer's target, or scan its QR code. Each phone gets a color in join order: red, blue, green, then yellow.
-6. On each phone, drag from the snowball at the bottom toward the walking penguin or any airborne bullseye and release. The computer shows each player's score separately.
+6. On each phone, drag from the snowball at the bottom toward the walking penguin or any airborne bullseye and release. The computer shows each player's score separately; the first player to 100 points wins.
 
 The room is held in server memory and lasts until the server stops.
 

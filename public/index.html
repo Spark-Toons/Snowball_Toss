@@ -599,6 +599,9 @@
 
       function updateRoom(state, isScreen) {
         app.room = state;
+        const winnerMessage = state.winner
+          ? `${state.winner.name} wins with ${state.winner.score} points!`
+          : null;
         if (state.lastThrow && state.lastThrow.id > app.lastThrowId) {
           app.lastThrowId = state.lastThrow.id;
           app.explosion = state.lastThrow.hit && state.lastThrow.target
@@ -631,6 +634,15 @@
             $("phone-shot-count").textContent = `${player.shots} ${player.shots === 1 ? "throw" : "throws"}`;
           }
           paintPhone();
+        }
+        if (winnerMessage) {
+          if (isScreen) {
+            $("screen-message").textContent = winnerMessage;
+          } else {
+            $("aim-state").textContent = state.winner.id === app.playerId
+              ? `You win with ${state.winner.score} points!`
+              : winnerMessage;
+          }
         }
       }
 
@@ -711,7 +723,7 @@
       }
 
       async function throwBall(point) {
-        if (!app.room || app.sending) return;
+        if (!app.room || app.sending || app.room.winner) return;
         app.sending = true;
         $("aim-state").textContent = "Snowball away!";
         try {
@@ -772,7 +784,7 @@
 
       const phoneCanvas = $("phone-canvas");
       phoneCanvas.addEventListener("pointerdown", (event) => {
-        if (!app.room || app.sending) return;
+        if (!app.room || app.sending || app.room.winner) return;
         const point = aimPoint(event);
         if (Math.hypot((point.x - START.x) * 1.6, point.y - START.y) > 0.15) return;
         event.preventDefault();
