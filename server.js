@@ -20,6 +20,7 @@ const TARGET_MIN_X = 0.08;
 const TARGET_MAX_X = 0.92;
 const AIR_TARGET_INTERVAL = 5000;
 const AIR_TARGET_HIDDEN_DURATION = 400;
+const AIR_TARGET_MIN_SPACING = 0.28;
 
 function json(response, status, value) {
   response.writeHead(status, {
@@ -43,9 +44,9 @@ function newTargets() {
   const now = Date.now();
   return [
     { id: "penguin", name: "Penguin", x: TARGET_MIN_X, y: 0.72, direction: 1, speed: 0.18, hitRadiusX: 0.085, hitRadiusY: 0.12, visible: true, hiddenUntil: 0 },
-    { id: "airTarget", name: "Air Target", x: 0.73, y: 0.32, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0 },
-    { id: "airTarget2", name: "Air Target 2", x: 0.27, y: 0.22, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
-    { id: "airTarget3", name: "Air Target 3", x: 0.48, y: 0.46, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
+    { id: "airTarget", name: "Air Target", x: 0.78, y: 0.20, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
+    { id: "airTarget2", name: "Air Target 2", x: 0.22, y: 0.31, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
+    { id: "airTarget3", name: "Air Target 3", x: 0.52, y: 0.52, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
   ];
 }
 
@@ -57,7 +58,7 @@ function relocateAirTarget(room, target) {
     };
     const clear = room.targets.every((other) =>
       other.id === target.id ||
-      Math.hypot((position.x - other.x) * 1.6, position.y - other.y) > 0.2
+      Math.hypot((position.x - other.x) * 1.6, position.y - other.y) > AIR_TARGET_MIN_SPACING
     );
     const moved = Math.hypot((position.x - target.x) * 1.6, position.y - target.y) > 0.25;
     if (clear && moved) {
