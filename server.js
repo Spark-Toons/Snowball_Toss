@@ -45,31 +45,40 @@ function newTargets() {
   const now = Date.now();
   return [
     { id: "penguin", name: "Penguin", x: TARGET_MIN_X, y: 0.72, direction: 1, speed: 0.18, hitRadiusX: 0.085, hitRadiusY: 0.12, visible: true, hiddenUntil: 0 },
-    { id: "airTarget", name: "Air Target", x: 0.78, y: 0.20, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
-    { id: "airTarget2", name: "Air Target 2", x: 0.22, y: 0.31, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
-    { id: "airTarget3", name: "Air Target 3", x: 0.52, y: 0.52, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
+    { id: "airTarget", name: "Air Target", x: 0.18, y: 0.18, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
+    { id: "airTarget2", name: "Air Target 2", x: 0.50, y: 0.18, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
+    { id: "airTarget3", name: "Air Target 3", x: 0.82, y: 0.18, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
+    { id: "airTarget4", name: "Air Target 4", x: 0.34, y: 0.48, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
+    { id: "airTarget5", name: "Air Target 5", x: 0.66, y: 0.48, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0, nextRelocationAt: now + AIR_TARGET_INTERVAL },
   ];
 }
 
 function relocateAirTarget(room, target) {
-  for (let attempt = 0; attempt < 50; attempt++) {
+  let bestPosition = null;
+  let bestDistance = -1;
+  for (let attempt = 0; attempt < 200; attempt++) {
     const position = {
       x: 0.16 + Math.random() * 0.68,
       y: 0.16 + Math.random() * 0.38,
     };
-    const clear = room.targets.every((other) =>
-      other.id === target.id ||
-      Math.hypot((position.x - other.x) * 1.6, position.y - other.y) > AIR_TARGET_MIN_SPACING
-    );
+    const nearestTarget = Math.min(...room.targets
+      .filter((other) => other.id !== target.id)
+      .map((other) => Math.hypot((position.x - other.x) * 1.6, position.y - other.y)));
     const moved = Math.hypot((position.x - target.x) * 1.6, position.y - target.y) > 0.25;
-    if (clear && moved) {
+    if (moved && nearestTarget > bestDistance) {
+      bestPosition = position;
+      bestDistance = nearestTarget;
+    }
+    if (moved && nearestTarget > AIR_TARGET_MIN_SPACING) {
       target.x = position.x;
       target.y = position.y;
       return;
     }
   }
-  target.x = target.x < 0.5 ? 0.82 : 0.18;
-  target.y = target.y < 0.32 ? 0.5 : 0.18;
+  if (bestPosition) {
+    target.x = bestPosition.x;
+    target.y = bestPosition.y;
+  }
 }
 
 function moveTargets(room) {

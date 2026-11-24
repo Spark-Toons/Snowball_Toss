@@ -1,6 +1,6 @@
 # Snowball Toss
 
-A multiplayer two-screen game: the computer shows the targets, and up to four phones join as color-coded snowball controllers with matching ball sprites. The board uses `public/game-background.png`, and `public/penguin-walk.gif` animates the penguin as it walks across the snow and flips direction at each edge. Players can hit the penguin or one of three airborne `public/air-target.png` bullseyes. All airborne targets relocate every five seconds; any hit target briefly explodes before reappearing. The first player to reach 100 points wins and ends the round.
+A multiplayer two-screen game: the computer shows the targets, and up to four phones join as color-coded snowball controllers with matching ball sprites. The board uses `public/game-background.png`, and `public/penguin-walk.gif` animates the penguin as it walks across the snow and flips direction at each edge. Players can hit the penguin or one of five airborne `public/air-target.png` bullseyes. All airborne targets relocate every five seconds; any hit target briefly explodes before reappearing. The first player to reach 100 points wins and ends the round.
 
 ## Run it locally
 
