@@ -10,6 +10,14 @@ const ROOT = path.join(__dirname, "public");
 const rooms = new Map();
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const START = { x: 0.5, y: 0.86 };
+const PLAYER_COLORS = [
+  { name: "Red", value: "#ef5350" },
+  { name: "Blue", value: "#42a5f5" },
+  { name: "Green", value: "#66bb6a" },
+  { name: "Yellow", value: "#ffd54f" },
+];
+const TARGET_MIN_X = 0.15;
+const TARGET_MAX_X = 0.85;
 
 function json(response, status, value) {
   response.writeHead(status, {
@@ -29,21 +37,44 @@ function newCode() {
   return code;
 }
 
-function newTarget() {
-  return {
-    x: 0.14 + Math.random() * 0.72,
-    y: 0.13 + Math.random() * 0.48,
-  };
+function newTargets() {
+  return [
+    { id: "seal", name: "Seal", x: 0.18, y: 0.39, speed: 0.12, hitRadiusX: 0.11, hitRadiusY: 0.14, visible: true, hiddenUntil: 0 },
+    { id: "polarBear", name: "Polar Bear", x: 0.42, y: 0.68, speed: 0.12, hitRadiusX: 0.085, hitRadiusY: 0.14, visible: true, hiddenUntil: 0 },
+  ];
+}
+
+function moveTargets(room) {
+  const now = Date.now();
+  const elapsed = Math.min(Math.max(now - room.targetsUpdatedAt, 0) / 1000, 0.2);
+
+  for (const target of room.targets) {
+    if (target.hiddenUntil) {
+      if (now < target.hiddenUntil) {
+        target.visible = false;
+        continue;
+      }
+      target.x = TARGET_MIN_X;
+      target.hiddenUntil = 0;
+      target.visible = true;
+    }
+
+    target.x += target.speed * elapsed;
+    if (target.x >= TARGET_MAX_X) target.x = TARGET_MIN_X;
+  }
+  room.targetsUpdatedAt = now;
 }
 
 function roomState(room) {
+  moveTargets(room);
   return {
     id: room.id,
-    target: room.target,
+    targets: room.targets.map(({ id, name, x, y, visible }) => ({ id, name, x, y, visible })),
     score: room.score,
     shots: room.shots,
     streak: room.streak,
     lastThrow: room.lastThrow,
+    players: room.players.map((player) => ({ ...player })),
   };
 }
 
@@ -141,22 +172,55 @@ const server = http.createServer(async (request, response) => {
     const id = newCode();
     const room = {
       id,
-      target: newTarget(),
+      targets: newTargets(),
+      targetsUpdatedAt: Date.now(),
       score: 0,
       shots: 0,
       streak: 0,
       lastThrow: null,
+      players: [],
     };
     rooms.set(id, room);
     json(response, 201, roomState(room));
     return;
   }
 
-  const roomMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{6})(\/throw)?$/i);
+  const roomMatch = url.pathname.match(/^\/api\/rooms\/([A-Z0-9]{6})(\/join|\/throw)?$/i);
   if (roomMatch) {
     const room = rooms.get(roomMatch[1].toUpperCase());
     if (!room) {
       json(response, 404, { error: "That room code wasn't found. Ask the computer to start a new game." });
+      return;
+    }
+
+    if (request.method === "POST" && roomMatch[2] === "/join") {
+      try {
+        const { playerId } = await readJson(request);
+        const existingPlayer = room.players.find((player) => player.id === playerId);
+        if (existingPlayer) {
+          json(response, 200, { ...roomState(room), playerId: existingPlayer.id });
+          return;
+        }
+        if (room.players.length >= PLAYER_COLORS.length) {
+          json(response, 409, { error: "This game already has four players." });
+          return;
+        }
+
+        const color = PLAYER_COLORS[room.players.length];
+        const player = {
+          id: crypto.randomUUID(),
+          name: `Player ${room.players.length + 1}`,
+          color: color.name,
+          colorValue: color.value,
+          score: 0,
+          shots: 0,
+          streak: 0,
+        };
+        room.players.push(player);
+        json(response, 201, { ...roomState(room), playerId: player.id });
+      } catch (error) {
+        json(response, error.status || 400, { error: error.message });
+      }
       return;
     }
 
@@ -165,9 +229,14 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    if (request.method === "POST" && roomMatch[2]) {
+    if (request.method === "POST" && roomMatch[2] === "/throw") {
       try {
-        const { x, y } = await readJson(request);
+        const { x, y, playerId } = await readJson(request);
+        const player = room.players.find((entry) => entry.id === playerId);
+        if (!player) {
+          json(response, 403, { error: "Join this game before throwing." });
+          return;
+        }
         if (
           !Number.isFinite(x) ||
           !Number.isFinite(y) ||
@@ -180,20 +249,35 @@ const server = http.createServer(async (request, response) => {
           return;
         }
 
-        const target = room.target;
-        const miss = Math.hypot((x - target.x) * 1.6, y - target.y);
-        const hit = miss <= 0.11;
+        moveTargets(room);
+        const target = room.targets.find((candidate) =>
+          candidate.visible &&
+          Math.hypot(
+            (x - candidate.x) / candidate.hitRadiusX,
+            (y - candidate.y) / candidate.hitRadiusY
+          ) <= 1
+        );
+        const hit = Boolean(target);
         room.shots += 1;
         room.streak = hit ? room.streak + 1 : 0;
+        player.shots += 1;
+        player.streak = hit ? player.streak + 1 : 0;
         if (hit) room.score += 1;
+        if (hit) player.score += 1;
         room.lastThrow = {
           id: room.shots,
+          playerId: player.id,
+          playerName: player.name,
+          colorValue: player.colorValue,
           x,
           y,
-          target,
+          target: target ? { id: target.id, name: target.name, x: target.x, y: target.y } : null,
           hit,
         };
-        room.target = newTarget();
+        if (target) {
+          target.hiddenUntil = Date.now() + 650;
+          target.visible = false;
+        }
         json(response, 200, roomState(room));
       } catch (error) {
         json(response, error.status || 400, { error: error.message });
@@ -203,6 +287,21 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (request.method === "GET") {
+    const imageFiles = {
+      "/game-background.png": "game-background.png",
+      "/snowball.png": "snowball.png",
+      "/seal.png": "seal.png",
+      "/polar-bear.png": "polar-bear.png",
+    };
+    const image = imageFiles[url.pathname];
+    if (image) {
+      response.writeHead(200, {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=3600",
+      });
+      fs.createReadStream(path.join(ROOT, image)).pipe(response);
+      return;
+    }
     const files = {
       "/": "index.html",
       "/index.html": "index.html",

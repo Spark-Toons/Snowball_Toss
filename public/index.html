@@ -92,6 +92,19 @@
       .game-top { margin-bottom: 14px; }
       .game-title { display: flex; align-items: center; gap: 10px; font-weight: 900; }
       .stats { display: flex; gap: 10px; }
+      .player-scores { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; }
+      .player-score {
+        min-width: 130px;
+        padding: 9px 13px;
+        border: 1px solid var(--player-color);
+        border-radius: 12px;
+        background: #102b47;
+      }
+      .player-score-name { display: flex; align-items: center; gap: 7px; color: #e6f4ff; font-size: 12px; font-weight: 900; }
+      .player-score-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--player-color); }
+      .player-score strong { display: block; margin-top: 3px; font-size: 21px; }
+      .player-badge { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: #e6f4ff; }
+      .player-badge-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--player-color); }
       .stat {
         min-width: 86px;
         padding: 9px 13px;
@@ -162,7 +175,7 @@
         <div class="setup panel">
           <div class="eyebrow">Two screens. One snowball.</div>
           <h1>Take aim.<br>Make it snow.</h1>
-          <p class="intro">Use your phone as a snowball launcher and your computer as the target screen. Line up your flick and see if you can hit the bullseye.</p>
+          <p class="intro">Use your phone as a snowball launcher and your computer as the target screen. Aim for the moving seal and polar bear.</p>
           <div id="home-message" class="message" role="status"></div>
           <div id="mode-choices" class="choices">
             <button id="start-screen" class="choice">
@@ -192,11 +205,12 @@
         <div class="game-top">
           <div class="game-title"><span>❄️</span><span>SNOWBALL TOSS</span></div>
           <div class="stats">
-            <div class="stat"><small>SCORE</small><strong id="screen-score">0</strong></div>
-            <div class="stat"><small>STREAK</small><strong id="screen-streak">0</strong></div>
+            <div class="stat"><small>TOTAL</small><strong id="screen-score">0</strong></div>
+            <div class="stat"><small>RUN</small><strong id="screen-streak">0</strong></div>
             <div class="stat"><small>THROWS</small><strong id="screen-shots">0</strong></div>
           </div>
         </div>
+        <div id="player-scores" class="player-scores" aria-label="Player scores"></div>
         <div class="game-board"><canvas id="screen-canvas" width="1200" height="750" aria-label="Snowball target game"></canvas></div>
         <div class="room-card panel">
           <div><div class="eyebrow">Phone controller</div><div class="room-code" id="screen-code">------</div></div>
@@ -210,13 +224,17 @@
       <section id="phone-game" class="shell phone-shell hidden">
         <div class="brand"><span class="brand-mark">❄️</span><span class="brand-name">SNOWBALL TOSS</span></div>
         <div class="stat-row">
-          <div><div class="eyebrow">Phone controller</div><strong id="phone-room" class="room-code"></strong></div>
+          <div>
+            <div class="eyebrow">Phone controller</div>
+            <strong id="phone-room" class="room-code"></strong>
+            <div class="player-badge"><span id="phone-color-dot" class="player-badge-dot"></span><strong id="phone-player-name"></strong></div>
+          </div>
           <div class="stats">
             <div class="stat"><small>SCORE</small><strong id="phone-score">0</strong></div>
             <div class="stat"><small>STREAK</small><strong id="phone-streak">0</strong></div>
           </div>
         </div>
-        <p class="aim-help">Drag the snowball toward the target and release to throw.</p>
+        <p class="aim-help">Drag the snowball toward a moving target and release to throw.</p>
         <div class="controller-board">
           <div class="game-board"><canvas id="phone-canvas" width="960" height="600" aria-label="Drag to aim and release to throw"></canvas></div>
           <div id="aim-state" class="aim-state" role="status">Waiting for your throw…</div>
@@ -227,6 +245,22 @@
     <script>
       const $ = (id) => document.getElementById(id);
       const START = { x: 0.5, y: 0.86 };
+      const gameBackground = new Image();
+      gameBackground.src = "/game-background.png";
+      const snowballImage = new Image();
+      snowballImage.src = "/snowball.png";
+      const targetAssets = {
+        seal: {
+          image: new Image(),
+          source: { x: 329, y: 38, width: 754, height: 685 },
+        },
+        polarBear: {
+          image: new Image(),
+          source: { x: 151, y: 94, width: 490, height: 710 },
+        },
+      };
+      targetAssets.seal.image.src = "/seal.png";
+      targetAssets.polarBear.image.src = "/polar-bear.png";
       const app = {
         info: null,
         room: null,
@@ -235,7 +269,11 @@
         aim: null,
         animation: null,
         animationStarted: 0,
+        explosion: null,
+        explosionStarted: 0,
         lastThrowId: 0,
+        playerId: null,
+        playerColor: null,
         feedbackUntil: 0,
         pollTimer: null,
         frame: null,
@@ -258,72 +296,115 @@
         return data;
       }
 
+      function drawExplosion(ctx, x, y, size, progress) {
+        const radius = size * (0.25 + progress * 0.65);
+        const fade = 1 - progress;
+        ctx.save();
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = "#ffd166";
+        ctx.strokeStyle = "#f36a43";
+        ctx.lineWidth = Math.max(3, size * 0.035);
+        ctx.beginPath();
+        for (let i = 0; i < 20; i++) {
+          const angle = (i / 20) * Math.PI * 2;
+          const pointRadius = radius * (i % 2 === 0 ? 1 : 0.58);
+          const px = x + Math.cos(angle) * pointRadius;
+          const py = y + Math.sin(angle) * pointRadius;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const distance = radius * (0.75 + progress * 0.38);
+          ctx.fillStyle = i % 2 === 0 ? "#fff3a6" : "#ff7652";
+          ctx.beginPath();
+          ctx.arc(
+            x + Math.cos(angle) * distance,
+            y + Math.sin(angle) * distance,
+            Math.max(2, size * 0.025 * fade),
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
       function drawScene(canvas, room, options) {
         const ctx = canvas.getContext("2d");
         const width = canvas.width;
         const height = canvas.height;
-        const target = room ? room.target : { x: 0.5, y: 0.38 };
-        const sky = ctx.createLinearGradient(0, 0, 0, height);
-        sky.addColorStop(0, "#18466b");
-        sky.addColorStop(0.65, "#286287");
-        sky.addColorStop(1, "#b8e4ed");
-        ctx.fillStyle = sky;
-        ctx.fillRect(0, 0, width, height);
+        const targets = room ? room.targets : [];
+        if (gameBackground.complete && gameBackground.naturalWidth) {
+          const scale = Math.max(width / gameBackground.naturalWidth, height / gameBackground.naturalHeight);
+          const sourceWidth = width / scale;
+          const sourceHeight = height / scale;
+          const sourceX = (gameBackground.naturalWidth - sourceWidth) / 2;
+          const sourceY = (gameBackground.naturalHeight - sourceHeight) / 2;
+          ctx.drawImage(
+            gameBackground,
+            sourceX, sourceY, sourceWidth, sourceHeight,
+            0, 0, width, height
+          );
+        } else {
+          const sky = ctx.createLinearGradient(0, 0, 0, height);
+          sky.addColorStop(0, "#18466b");
+          sky.addColorStop(0.65, "#286287");
+          sky.addColorStop(1, "#b8e4ed");
+          ctx.fillStyle = sky;
+          ctx.fillRect(0, 0, width, height);
 
-        for (let i = 0; i < 48; i++) {
-          const x = ((i * 193 + 61) % width);
-          const y = ((i * 137 + 27) % (height * 0.72));
-          ctx.globalAlpha = 0.25 + (i % 4) * 0.12;
-          ctx.fillStyle = "#fff";
+          for (let i = 0; i < 48; i++) {
+            const x = ((i * 193 + 61) % width);
+            const y = ((i * 137 + 27) % (height * 0.72));
+            ctx.globalAlpha = 0.25 + (i % 4) * 0.12;
+            ctx.fillStyle = "#fff";
+            ctx.beginPath();
+            ctx.arc(x, y, i % 3 === 0 ? 2.5 : 1.4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+
+          ctx.fillStyle = "#d9f4f5";
           ctx.beginPath();
-          ctx.arc(x, y, i % 3 === 0 ? 2.5 : 1.4, 0, Math.PI * 2);
+          ctx.moveTo(0, height * 0.76);
+          ctx.quadraticCurveTo(width * 0.2, height * 0.57, width * 0.42, height * 0.76);
+          ctx.quadraticCurveTo(width * 0.68, height * 0.53, width, height * 0.74);
+          ctx.lineTo(width, height);
+          ctx.lineTo(0, height);
+          ctx.fill();
+          ctx.fillStyle = "#f4fbfc";
+          ctx.beginPath();
+          ctx.moveTo(0, height * 0.88);
+          ctx.quadraticCurveTo(width * 0.35, height * 0.7, width * 0.62, height * 0.89);
+          ctx.quadraticCurveTo(width * 0.83, height * 0.76, width, height * 0.86);
+          ctx.lineTo(width, height);
+          ctx.lineTo(0, height);
           ctx.fill();
         }
-        ctx.globalAlpha = 1;
 
-        ctx.fillStyle = "#d9f4f5";
-        ctx.beginPath();
-        ctx.moveTo(0, height * 0.76);
-        ctx.quadraticCurveTo(width * 0.2, height * 0.57, width * 0.42, height * 0.76);
-        ctx.quadraticCurveTo(width * 0.68, height * 0.53, width, height * 0.74);
-        ctx.lineTo(width, height);
-        ctx.lineTo(0, height);
-        ctx.fill();
-        ctx.fillStyle = "#f4fbfc";
-        ctx.beginPath();
-        ctx.moveTo(0, height * 0.88);
-        ctx.quadraticCurveTo(width * 0.35, height * 0.7, width * 0.62, height * 0.89);
-        ctx.quadraticCurveTo(width * 0.83, height * 0.76, width, height * 0.86);
-        ctx.lineTo(width, height);
-        ctx.lineTo(0, height);
-        ctx.fill();
-
-        const tx = target.x * width;
-        const ty = target.y * height;
-        const radius = Math.min(width, height) * 0.075;
-        ctx.save();
-        ctx.shadowColor = "rgb(5 26 44 / 40%)";
-        ctx.shadowBlur = Math.min(width, height) * 0.025;
-        ctx.shadowOffsetY = Math.min(width, height) * 0.012;
-        ctx.fillStyle = "#ef615c";
-        ctx.beginPath();
-        ctx.arc(tx, ty, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowColor = "transparent";
-        ctx.lineWidth = Math.max(3, radius * 0.1);
-        ctx.strokeStyle = "#fff5e9";
-        ctx.beginPath();
-        ctx.arc(tx, ty, radius * 0.69, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = "#fff5e9";
-        ctx.beginPath();
-        ctx.arc(tx, ty, radius * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#ef615c";
-        ctx.beginPath();
-        ctx.arc(tx, ty, radius * 0.15, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        for (const target of targets) {
+          if (!target.visible) continue;
+          const asset = targetAssets[target.id];
+          if (!asset || !asset.image.complete || !asset.image.naturalWidth) continue;
+          const source = asset.source;
+          const scale = Math.min(width * 0.19 / source.width, height * 0.24 / source.height);
+          const targetWidth = source.width * scale;
+          const targetHeight = source.height * scale;
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(
+            asset.image,
+            source.x, source.y, source.width, source.height,
+            target.x * width - targetWidth / 2,
+            target.y * height - targetHeight / 2,
+            targetWidth, targetHeight
+          );
+          ctx.restore();
+        }
 
         const start = { x: START.x * width, y: START.y * height };
         let ball = start;
@@ -364,19 +445,45 @@
         ctx.ellipse(start.x, start.y + height * 0.023, width * 0.027, height * 0.012, 0, 0, Math.PI * 2);
         ctx.fill();
         const ballRadius = Math.min(width, height) * 0.037;
-        const ballGradient = ctx.createRadialGradient(
-          ball.x - ballRadius * 0.35, ball.y - ballRadius * 0.4, ballRadius * 0.1,
-          ball.x, ball.y, ballRadius
-        );
-        ballGradient.addColorStop(0, "#fff");
-        ballGradient.addColorStop(1, "#b8dce8");
-        ctx.fillStyle = ballGradient;
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = Math.max(1.5, ballRadius * 0.08);
-        ctx.strokeStyle = "rgb(37 93 122 / 55%)";
-        ctx.stroke();
+        if (snowballImage.complete && snowballImage.naturalWidth) {
+          const imageSize = ballRadius * (320 / 70);
+          const imageX = ball.x - imageSize / 2;
+          const imageY = ball.y - imageSize / 2;
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(snowballImage, imageX, imageY, imageSize, imageSize);
+          if (options && options.playerColor) {
+            ctx.globalCompositeOperation = "source-atop";
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = options.playerColor;
+            ctx.fillRect(imageX, imageY, imageSize, imageSize);
+          }
+          ctx.restore();
+        } else {
+          const ballGradient = ctx.createRadialGradient(
+            ball.x - ballRadius * 0.35, ball.y - ballRadius * 0.4, ballRadius * 0.1,
+            ball.x, ball.y, ballRadius
+          );
+          ballGradient.addColorStop(0, "#fff");
+          ballGradient.addColorStop(1, options && options.playerColor ? options.playerColor : "#b8dce8");
+          ctx.fillStyle = ballGradient;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.lineWidth = Math.max(1.5, ballRadius * 0.08);
+          ctx.strokeStyle = "rgb(37 93 122 / 55%)";
+          ctx.stroke();
+        }
+
+        if (options && options.explosion) {
+          drawExplosion(
+            ctx,
+            options.explosion.x * width,
+            options.explosion.y * height,
+            Math.min(width * 0.23, height * 0.24),
+            options.explosion.progress
+          );
+        }
 
         if (options && options.result) {
           ctx.font = `900 ${Math.round(Math.min(width, height) * 0.075)}px Trebuchet MS, sans-serif`;
@@ -384,7 +491,7 @@
           ctx.lineWidth = Math.max(3, width * 0.005);
           ctx.strokeStyle = "rgb(5 31 51 / 65%)";
           ctx.fillStyle = options.result.hit ? "#b9ffd3" : "#fff";
-          const label = options.result.hit ? "BULLSEYE!" : "SO CLOSE!";
+          const label = options.result.hit ? "NICE HIT!" : "SO CLOSE!";
           ctx.strokeText(label, width / 2, height * 0.18);
           ctx.fillText(label, width / 2, height * 0.18);
         }
@@ -397,19 +504,30 @@
         $("screen-score").textContent = room.score;
         $("screen-streak").textContent = room.streak;
         $("screen-shots").textContent = room.shots;
+        renderPlayerScores(room.players);
+        const now = performance.now();
         let options = null;
         if (app.animation) {
           options = {
             throw: app.animation,
-            progress: Math.min(1, (performance.now() - app.animationStarted) / 720),
+            playerColor: app.animation.colorValue,
+            progress: Math.min(1, (now - app.animationStarted) / 720),
           };
           if (options.progress >= 1) app.animation = null;
         }
-        if (room.lastThrow && performance.now() < app.feedbackUntil) {
+        if (app.explosion) {
+          const progress = (now - app.explosionStarted) / 650;
+          if (progress < 1) {
+            options = { ...(options || {}), explosion: { ...app.explosion, progress } };
+          } else {
+            app.explosion = null;
+          }
+        }
+        if (room.lastThrow && now < app.feedbackUntil) {
           options = { ...(options || {}), result: room.lastThrow };
         }
         drawScene(canvas, room, options);
-        if (app.animation || performance.now() < app.feedbackUntil) {
+        if (app.animation || app.explosion || now < app.feedbackUntil) {
           app.frame = requestAnimationFrame(paintScreen);
         } else {
           app.frame = null;
@@ -419,29 +537,80 @@
       function paintPhone() {
         const canvas = $("phone-canvas");
         if (!app.room) return;
-        drawScene(canvas, app.room, app.aim ? { aim: app.aim, showBall: true } : null);
+        const options = {
+          ...(app.aim ? { aim: app.aim, showBall: true } : {}),
+          playerColor: app.playerColor,
+        };
+        if (app.explosion) {
+          const progress = (performance.now() - app.explosionStarted) / 650;
+          if (progress < 1) {
+            options.explosion = { ...app.explosion, progress };
+            if (!app.frame) {
+              app.frame = requestAnimationFrame(() => {
+                app.frame = null;
+                paintPhone();
+              });
+            }
+          } else {
+            app.explosion = null;
+          }
+        }
+        drawScene(canvas, app.room, options);
+      }
+
+      function renderPlayerScores(players) {
+        const container = $("player-scores");
+        container.textContent = "";
+        for (const player of players) {
+          const card = document.createElement("div");
+          card.className = "player-score";
+          card.style.setProperty("--player-color", player.colorValue);
+          const name = document.createElement("div");
+          name.className = "player-score-name";
+          const dot = document.createElement("span");
+          dot.className = "player-score-dot";
+          const label = document.createElement("span");
+          label.textContent = `${player.name} · ${player.color}`;
+          name.append(dot, label);
+          const score = document.createElement("strong");
+          score.textContent = player.score;
+          card.append(name, score);
+          container.append(card);
+        }
       }
 
       function updateRoom(state, isScreen) {
         app.room = state;
         if (state.lastThrow && state.lastThrow.id > app.lastThrowId) {
           app.lastThrowId = state.lastThrow.id;
+          app.explosion = state.lastThrow.hit && state.lastThrow.target
+            ? { x: state.lastThrow.target.x, y: state.lastThrow.target.y }
+            : null;
+          app.explosionStarted = performance.now();
           if (isScreen) {
             app.animation = state.lastThrow;
             app.animationStarted = performance.now();
             app.feedbackUntil = performance.now() + 1700;
-            $("screen-message").textContent = state.lastThrow.hit ? "Bullseye! Nice throw." : "Missed! Line it up and try again.";
+            $("screen-message").textContent = state.lastThrow.hit
+              ? `${state.lastThrow.playerName} hit the ${state.lastThrow.target.name}!`
+              : "Missed! Line it up and try again.";
           } else {
-            $("phone-feedback").textContent = state.lastThrow.hit ? "Bullseye!" : "Miss!";
+            $("phone-feedback").textContent = state.lastThrow.hit ? "Nice hit!" : "Miss!";
             window.setTimeout(() => { $("phone-feedback").textContent = ""; }, 1300);
           }
         }
         if (isScreen) {
           if (!app.frame) paintScreen();
         } else {
-          $("phone-score").textContent = state.score;
-          $("phone-streak").textContent = state.streak;
-          $("phone-shot-count").textContent = `${state.shots} ${state.shots === 1 ? "throw" : "throws"}`;
+          const player = state.players.find((entry) => entry.id === app.playerId);
+          if (player) {
+            app.playerColor = player.colorValue;
+            $("phone-player-name").textContent = `${player.name} · ${player.color}`;
+            $("phone-color-dot").style.setProperty("--player-color", player.colorValue);
+            $("phone-score").textContent = player.score;
+            $("phone-streak").textContent = player.streak;
+            $("phone-shot-count").textContent = `${player.shots} ${player.shots === 1 ? "throw" : "throws"}`;
+          }
           paintPhone();
         }
       }
@@ -488,7 +657,7 @@
             window.clearInterval(app.pollTimer);
           }
         };
-        app.pollTimer = window.setInterval(poll, isScreen ? 100 : 450);
+        app.pollTimer = window.setInterval(poll, isScreen ? 100 : 150);
       }
 
       async function joinRoom(event) {
@@ -499,10 +668,18 @@
       async function joinRoomCode(code) {
         $("home-message").textContent = "";
         try {
-          const room = await api(`/api/rooms/${encodeURIComponent(code)}`);
+          const storageKey = `snowball-player:${code}`;
+          const room = await api(`/api/rooms/${encodeURIComponent(code)}/join`, {
+            method: "POST",
+            body: JSON.stringify({ playerId: localStorage.getItem(storageKey) }),
+          });
+          localStorage.setItem(storageKey, room.playerId);
           app.room = room;
+          app.playerId = room.playerId;
           app.mode = "phone";
           app.lastThrowId = room.lastThrow ? room.lastThrow.id : 0;
+          const player = room.players.find((entry) => entry.id === app.playerId);
+          app.playerColor = player.colorValue;
           $("phone-room").textContent = room.id;
           $("aim-state").textContent = "Drag the ball toward the target.";
           $("phone-feedback").textContent = "";
@@ -521,7 +698,7 @@
         try {
           const state = await api(`/api/rooms/${app.room.id}/throw`, {
             method: "POST",
-            body: JSON.stringify(point),
+            body: JSON.stringify({ ...point, playerId: app.playerId }),
           });
           updateRoom(state, false);
           $("aim-state").textContent = "Drag the ball toward the target.";
@@ -562,6 +739,7 @@
         if (app.frame) cancelAnimationFrame(app.frame);
         app.room = null;
         app.animation = null;
+        app.explosion = null;
         show("home");
       });
 
