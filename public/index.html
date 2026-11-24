@@ -249,6 +249,16 @@
       gameBackground.src = "/game-background.png";
       const snowballImage = new Image();
       snowballImage.src = "/snowball.png";
+      const snowballImages = {
+        Red: new Image(),
+        Blue: new Image(),
+        Green: new Image(),
+        Yellow: new Image(),
+      };
+      snowballImages.Red.src = "/snowball-player1.png";
+      snowballImages.Blue.src = "/snowball-player2.png";
+      snowballImages.Green.src = "/snowball-player3.png";
+      snowballImages.Yellow.src = "/snowball-player4.png";
       const penguinWalk = new Image();
       penguinWalk.src = "/penguin-walk.gif";
       const airTargetImage = new Image();
@@ -266,6 +276,7 @@
         lastThrowId: 0,
         playerId: null,
         playerColor: null,
+        playerColorName: null,
         feedbackUntil: 0,
         pollTimer: null,
         frame: null,
@@ -439,7 +450,18 @@
         ctx.ellipse(start.x, start.y + height * 0.023, width * 0.027, height * 0.012, 0, 0, Math.PI * 2);
         ctx.fill();
         const ballRadius = Math.min(width, height) * 0.037;
-        if (snowballImage.complete && snowballImage.naturalWidth) {
+        const playerBall = options && options.playerBall;
+        if (playerBall && playerBall.complete && playerBall.naturalWidth) {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(
+            playerBall,
+            8, 9, 16, 16,
+            ball.x - ballRadius, ball.y - ballRadius,
+            ballRadius * 2, ballRadius * 2
+          );
+          ctx.restore();
+        } else if (snowballImage.complete && snowballImage.naturalWidth) {
           const imageSize = ballRadius * (320 / 70);
           const imageX = ball.x - imageSize / 2;
           const imageY = ball.y - imageSize / 2;
@@ -505,6 +527,7 @@
           options = {
             throw: app.animation,
             playerColor: app.animation.colorValue,
+            playerBall: snowballImages[app.animation.color],
             progress: Math.min(1, (now - app.animationStarted) / 720),
           };
           if (options.progress >= 1) app.animation = null;
@@ -534,6 +557,7 @@
         const options = {
           ...(app.aim ? { aim: app.aim, showBall: true } : {}),
           playerColor: app.playerColor,
+          playerBall: snowballImages[app.playerColorName],
         };
         if (app.explosion) {
           const progress = (performance.now() - app.explosionStarted) / 650;
@@ -599,6 +623,7 @@
           const player = state.players.find((entry) => entry.id === app.playerId);
           if (player) {
             app.playerColor = player.colorValue;
+            app.playerColorName = player.color;
             $("phone-player-name").textContent = `${player.name} · ${player.color}`;
             $("phone-color-dot").style.setProperty("--player-color", player.colorValue);
             $("phone-score").textContent = player.score;

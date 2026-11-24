@@ -277,6 +277,7 @@ const server = http.createServer(async (request, response) => {
           id: room.shots,
           playerId: player.id,
           playerName: player.name,
+          color: player.color,
           colorValue: player.colorValue,
           x,
           y,
@@ -299,6 +300,10 @@ const server = http.createServer(async (request, response) => {
     const imageFiles = {
       "/game-background.png": "game-background.png",
       "/snowball.png": "snowball.png",
+      "/snowball-player1.png": "snowball-player1.png",
+      "/snowball-player2.png": "snowball-player2.png",
+      "/snowball-player3.png": "snowball-player3.png",
+      "/snowball-player4.png": "snowball-player4.png",
       "/penguin-walk.gif": "penguin-walk.gif",
       "/air-target.png": "air-target.png",
     };
