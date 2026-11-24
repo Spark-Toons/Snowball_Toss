@@ -553,9 +553,7 @@
           ctx.strokeStyle = "rgb(5 31 51 / 65%)";
           ctx.fillStyle = options.result.hit ? options.result.colorValue || "#b9ffd3" : "#fff";
           const target = options.result.hit && options.result.target;
-          const label = target
-            ? `${options.result.playerName} hit ${target.name}!`
-            : options.result.hit ? `${options.result.playerName} hit a target!` : "SO CLOSE!";
+          const label = options.result.hit ? `${options.result.playerName} hit` : "SO CLOSE!";
           const textWidth = ctx.measureText(label).width;
           const x = target
             ? Math.max(textWidth / 2 + 12, Math.min(width - textWidth / 2 - 12, target.x * width))
@@ -674,7 +672,7 @@
             app.animationStarted = performance.now();
             app.feedbackUntil = performance.now() + 1700;
             $("screen-message").textContent = state.lastThrow.hit
-              ? `${state.lastThrow.playerName} hit the ${state.lastThrow.target.name}!`
+              ? `${state.lastThrow.playerName} hit`
               : "Missed! Line it up and try again.";
           } else {
             $("phone-feedback").textContent = state.lastThrow.hit ? "Nice hit!" : "Miss!";
