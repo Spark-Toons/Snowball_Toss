@@ -16,8 +16,8 @@ const PLAYER_COLORS = [
   { name: "Green", value: "#66bb6a" },
   { name: "Yellow", value: "#ffd54f" },
 ];
-const TARGET_MIN_X = 0.15;
-const TARGET_MAX_X = 0.85;
+const TARGET_MIN_X = 0.08;
+const TARGET_MAX_X = 0.92;
 
 function json(response, status, value) {
   response.writeHead(status, {
@@ -39,8 +39,8 @@ function newCode() {
 
 function newTargets() {
   return [
-    { id: "seal", name: "Seal", x: 0.18, y: 0.39, speed: 0.12, hitRadiusX: 0.11, hitRadiusY: 0.14, visible: true, hiddenUntil: 0 },
-    { id: "polarBear", name: "Polar Bear", x: 0.42, y: 0.68, speed: 0.12, hitRadiusX: 0.085, hitRadiusY: 0.14, visible: true, hiddenUntil: 0 },
+    { id: "penguin", name: "Penguin", x: TARGET_MIN_X, y: 0.72, direction: 1, speed: 0.18, hitRadiusX: 0.085, hitRadiusY: 0.12, visible: true, hiddenUntil: 0 },
+    { id: "airTarget", name: "Air Target", x: 0.73, y: 0.32, direction: 0, speed: 0, hitRadiusX: 0.06, hitRadiusY: 0.09, visible: true, hiddenUntil: 0 },
   ];
 }
 
@@ -54,13 +54,22 @@ function moveTargets(room) {
         target.visible = false;
         continue;
       }
-      target.x = TARGET_MIN_X;
+      if (target.speed) {
+        target.x = target.direction > 0 ? TARGET_MIN_X : TARGET_MAX_X;
+      }
       target.hiddenUntil = 0;
       target.visible = true;
     }
 
-    target.x += target.speed * elapsed;
-    if (target.x >= TARGET_MAX_X) target.x = TARGET_MIN_X;
+    if (!target.speed) continue;
+    target.x += target.direction * target.speed * elapsed;
+    if (target.x <= TARGET_MIN_X) {
+      target.x = TARGET_MIN_X;
+      target.direction = 1;
+    } else if (target.x >= TARGET_MAX_X) {
+      target.x = TARGET_MAX_X;
+      target.direction = -1;
+    }
   }
   room.targetsUpdatedAt = now;
 }
@@ -69,7 +78,7 @@ function roomState(room) {
   moveTargets(room);
   return {
     id: room.id,
-    targets: room.targets.map(({ id, name, x, y, visible }) => ({ id, name, x, y, visible })),
+    targets: room.targets.map(({ id, name, x, y, direction, visible }) => ({ id, name, x, y, direction, visible })),
     score: room.score,
     shots: room.shots,
     streak: room.streak,
@@ -290,13 +299,13 @@ const server = http.createServer(async (request, response) => {
     const imageFiles = {
       "/game-background.png": "game-background.png",
       "/snowball.png": "snowball.png",
-      "/seal.png": "seal.png",
-      "/polar-bear.png": "polar-bear.png",
+      "/penguin-walk.gif": "penguin-walk.gif",
+      "/air-target.png": "air-target.png",
     };
     const image = imageFiles[url.pathname];
     if (image) {
       response.writeHead(200, {
-        "Content-Type": "image/png",
+        "Content-Type": image.endsWith(".gif") ? "image/gif" : "image/png",
         "Cache-Control": "public, max-age=3600",
       });
       fs.createReadStream(path.join(ROOT, image)).pipe(response);

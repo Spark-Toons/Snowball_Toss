@@ -175,7 +175,7 @@
         <div class="setup panel">
           <div class="eyebrow">Two screens. One snowball.</div>
           <h1>Take aim.<br>Make it snow.</h1>
-          <p class="intro">Use your phone as a snowball launcher and your computer as the target screen. Aim for the moving seal and polar bear.</p>
+          <p class="intro">Use your phone as a snowball launcher and your computer as the target screen. Hit the walking penguin as it waddles across the snow.</p>
           <div id="home-message" class="message" role="status"></div>
           <div id="mode-choices" class="choices">
             <button id="start-screen" class="choice">
@@ -234,7 +234,7 @@
             <div class="stat"><small>STREAK</small><strong id="phone-streak">0</strong></div>
           </div>
         </div>
-        <p class="aim-help">Drag the snowball toward a moving target and release to throw.</p>
+        <p class="aim-help">Drag the snowball toward the walking penguin and release to throw.</p>
         <div class="controller-board">
           <div class="game-board"><canvas id="phone-canvas" width="960" height="600" aria-label="Drag to aim and release to throw"></canvas></div>
           <div id="aim-state" class="aim-state" role="status">Waiting for your throw…</div>
@@ -249,18 +249,10 @@
       gameBackground.src = "/game-background.png";
       const snowballImage = new Image();
       snowballImage.src = "/snowball.png";
-      const targetAssets = {
-        seal: {
-          image: new Image(),
-          source: { x: 329, y: 38, width: 754, height: 685 },
-        },
-        polarBear: {
-          image: new Image(),
-          source: { x: 151, y: 94, width: 490, height: 710 },
-        },
-      };
-      targetAssets.seal.image.src = "/seal.png";
-      targetAssets.polarBear.image.src = "/polar-bear.png";
+      const penguinWalk = new Image();
+      penguinWalk.src = "/penguin-walk.gif";
+      const airTargetImage = new Image();
+      airTargetImage.src = "/air-target.png";
       const app = {
         info: null,
         room: null,
@@ -388,22 +380,24 @@
 
         for (const target of targets) {
           if (!target.visible) continue;
-          const asset = targetAssets[target.id];
-          if (!asset || !asset.image.complete || !asset.image.naturalWidth) continue;
-          const source = asset.source;
-          const scale = Math.min(width * 0.19 / source.width, height * 0.24 / source.height);
-          const targetWidth = source.width * scale;
-          const targetHeight = source.height * scale;
-          ctx.save();
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(
-            asset.image,
-            source.x, source.y, source.width, source.height,
-            target.x * width - targetWidth / 2,
-            target.y * height - targetHeight / 2,
-            targetWidth, targetHeight
-          );
-          ctx.restore();
+          if (target.id === "penguin" && penguinWalk.complete && penguinWalk.naturalWidth) {
+            const size = Math.min(width * 0.16, height * 0.2);
+            const scale = size / Math.max(penguinWalk.naturalWidth, penguinWalk.naturalHeight);
+            const targetWidth = penguinWalk.naturalWidth * scale;
+            const targetHeight = penguinWalk.naturalHeight * scale;
+            ctx.save();
+            ctx.translate(target.x * width, target.y * height);
+            if (target.direction < 0) ctx.scale(-1, 1);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(penguinWalk, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
+            ctx.restore();
+          } else if (target.id === "airTarget" && airTargetImage.complete && airTargetImage.naturalWidth) {
+            const size = Math.min(width * 0.14, height * 0.18);
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(airTargetImage, target.x * width - size / 2, target.y * height - size / 2, size, size);
+            ctx.restore();
+          }
         }
 
         const start = { x: START.x * width, y: START.y * height };
@@ -657,7 +651,7 @@
             window.clearInterval(app.pollTimer);
           }
         };
-        app.pollTimer = window.setInterval(poll, isScreen ? 100 : 150);
+        app.pollTimer = window.setInterval(poll, 100);
       }
 
       async function joinRoom(event) {
