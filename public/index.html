@@ -87,6 +87,26 @@
       }
       .message { min-height: 24px; margin: 14px 0 0; color: #ffc9a9; }
       .hidden { display: none !important; }
+      .winner-popup {
+        position: fixed;
+        z-index: 20;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: rgb(3 14 27 / 82%);
+      }
+      .winner-card {
+        width: min(100%, 520px);
+        padding: clamp(28px, 6vw, 48px);
+        border: 2px solid #8fe6fb;
+        border-radius: 24px;
+        background: linear-gradient(150deg, #183551, #0e253d);
+        box-shadow: 0 24px 80px rgb(0 0 0 / 45%);
+        text-align: center;
+      }
+      .winner-card h2 { margin: 14px 0; color: #ffe082; font-size: clamp(36px, 8vw, 58px); }
+      .winner-card p { margin: 0 0 24px; }
       .game-shell { width: min(100% - 24px, 1320px); padding-top: 16px; }
       .game-top, .stat-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .game-top { margin-bottom: 14px; }
@@ -241,6 +261,14 @@
         </div>
         <div class="controller-footer"><span id="phone-shot-count">0 throws</span><span id="phone-feedback" class="feedback"></span></div>
       </section>
+      <div id="winner-popup" class="winner-popup hidden" role="alertdialog" aria-modal="true" aria-labelledby="winner-title" aria-describedby="winner-description">
+        <div class="winner-card">
+          <div class="eyebrow">Game over</div>
+          <h2 id="winner-title">Player wins!</h2>
+          <p id="winner-description">First to 100 points!</p>
+          <button id="winner-close" type="button">Continue</button>
+        </div>
+      </div>
     </main>
     <script>
       const $ = (id) => document.getElementById(id);
@@ -274,6 +302,7 @@
         explosion: null,
         explosionStarted: 0,
         lastThrowId: 0,
+        winnerShownFor: null,
         playerId: null,
         playerColor: null,
         playerColorName: null,
@@ -599,6 +628,12 @@
 
       function updateRoom(state, isScreen) {
         app.room = state;
+        if (state.winner && app.winnerShownFor !== state.winner.id) {
+          app.winnerShownFor = state.winner.id;
+          $("winner-title").textContent = `${state.winner.name} wins!`;
+          $("winner-popup").classList.remove("hidden");
+          $("winner-close").focus();
+        }
         const winnerMessage = state.winner
           ? `${state.winner.name} wins with ${state.winner.score} points!`
           : null;
@@ -772,6 +807,9 @@
         app.animation = null;
         app.explosion = null;
         show("home");
+      });
+      $("winner-close").addEventListener("click", () => {
+        $("winner-popup").classList.add("hidden");
       });
 
       const requestedRoom = new URLSearchParams(location.search).get("room");
