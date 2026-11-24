@@ -175,7 +175,7 @@
         <div class="setup panel">
           <div class="eyebrow">Two screens. One snowball.</div>
           <h1>Take aim.<br>Make it snow.</h1>
-          <p class="intro">Use your phone as a snowball launcher and your computer as the target screen. Hit the walking penguin or the bullseye in the air.</p>
+          <p class="intro">Use your phone as a snowball launcher and your computer as the target screen. Hit the walking penguin or one of three airborne bullseyes.</p>
           <div id="home-message" class="message" role="status"></div>
           <div id="mode-choices" class="choices">
             <button id="start-screen" class="choice">
@@ -234,7 +234,7 @@
             <div class="stat"><small>STREAK</small><strong id="phone-streak">0</strong></div>
           </div>
         </div>
-        <p class="aim-help">Drag the snowball toward the walking penguin or airborne bullseye and release to throw.</p>
+        <p class="aim-help">Drag the snowball toward the walking penguin or any airborne bullseye and release to throw.</p>
         <div class="controller-board">
           <div class="game-board"><canvas id="phone-canvas" width="960" height="600" aria-label="Drag to aim and release to throw"></canvas></div>
           <div id="aim-state" class="aim-state" role="status">Waiting for your throw…</div>
@@ -402,7 +402,7 @@
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(penguinWalk, -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
             ctx.restore();
-          } else if (target.id === "airTarget" && airTargetImage.complete && airTargetImage.naturalWidth) {
+          } else if (target.id.startsWith("airTarget") && airTargetImage.complete && airTargetImage.naturalWidth) {
             const size = Math.min(width * 0.14, height * 0.18);
             ctx.save();
             ctx.imageSmoothingEnabled = false;
